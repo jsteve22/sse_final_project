@@ -93,8 +93,28 @@ def get_package_functions(packagename):
 
 def main():
     reset_db()
+
+    # add cryptography package
     add_package('cryptography', '41.0.7')
     add_function('cryptography', 'cryptography.hazmat.primitives.asymmetric.rsa', 'PKE', False)
+    add_function('cryptography', 'cryptography.hazmat.primitives.asymmetric.dh', 'PKE', False)
+    add_function('cryptography', 'cryptography.hazmat.primitives.asymmetric.ed25519', 'PKE', False)
+    add_function('cryptography', 'cryptography.hazmat.primitives.asymmetric.ed448', 'PKE', False)
+
+    # add M2Crypto package
+    add_package('M2Crypto', '0.40.1')
+    add_function('M2Crypto', 'M2Crypto.RSA', 'PKE', False)
+    add_function('M2Crypto', 'M2Crypto.DSA', 'PKE', False)
+    add_function('M2Crypto', 'M2Crypto.DH', 'PKE', False)
+
+    # add PyCryptodome package
+    add_package('PyCryptodome', '3.19.0')
+    add_function('M2Crypto', 'Crypto.PublicKey.RSA', 'PKE', False)
+
+    # add PyNaCl package
+    add_package('PyNaCl', '1.5.0')
+    add_function('PyNaCl', 'nacl.public', 'PKE', False)
+
     return
 
 if __name__ == '__main__':
