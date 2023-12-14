@@ -62,8 +62,11 @@ def add_package(name, version, con=None):
 def fuzzy_search_packageid(packagename):
     con = sqlite3.connect(f'{DB_NAME}')
     cur = con.cursor()
-    res = cur.execute(f'SELECT *, rowid FROM packages WHERE name LIKE "%{packagename}%"')
-    return res.fetchall()[0][2]
+    res = cur.execute(f'SELECT *, rowid FROM packages WHERE name LIKE "{packagename}"')
+    x = res.fetchall()
+    # names = [r for r in x]
+    # print(names)
+    return x[0][2]
 
 def add_function(packagename, callpath, purpose, qresistant, con=None):
     con = con or sqlite3.connect(f'{DB_NAME}')
@@ -108,8 +111,12 @@ def main():
     add_function('M2Crypto', 'M2Crypto.DH', 'PKE', False)
 
     # add PyCryptodome package
-    add_package('PyCryptodome', '3.19.0')
-    add_function('M2Crypto', 'Crypto.PublicKey.RSA', 'PKE', False)
+    add_package('Crypto', '3.19.0')
+    add_function('Crypto', 'Crypto.PublicKey.RSA', 'PKE', False)
+    add_function('Crypto', 'Crypto.Cipher.DES', 'SKE', False) # add this to test if program can detect DES function call
+
+    add_package('Cryptodome', '3.19.0')
+    add_function('Cryptodome', 'Cryptodome.Cipher.DES', 'SKE', False) # add this to test if program can detect DES function call
 
     # add PyNaCl package
     add_package('PyNaCl', '1.5.0')

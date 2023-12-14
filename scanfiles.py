@@ -18,11 +18,11 @@ def is_package_included(filename, packagename):
     filelines = load_file(filename)
 
     for line in filelines:
-        is_import = re.match(f'\s*import {packagename}.*', line)
+        is_import = re.match(f'\S*import {packagename}.*', line)
         if bool(is_import):
             return True
 
-        is_import = re.match(f'\s*from {packagename}(.[a-zA-Z0-9]+)* import.*', line)
+        is_import = re.match(f'\S*from {packagename}(.[a-zA-Z0-9]+)* import.*', line)
         if bool(is_import):
             return True
 
@@ -41,7 +41,7 @@ def test_is_package_included():
     print_is_package_included('cryptography_rsa_example.py', 'cryptography')
     return
 
-def collect_vulnerabilities(tree, functionpaths):
+def collect_vulnerabilities(tree, functionpaths, filename=''):
     # module_levels = [functionpath]
     module_levels = functionpaths.copy()
 
@@ -110,15 +110,13 @@ def collect_vulnerabilities(tree, functionpaths):
 
             # print()
             pass
-        else:
-            for child in ast.iter_child_nodes(node):
-                # print(f'{ast.unparse(child).rstrip()}')
-                traverse(child, context)
-                pass
+        for child in ast.iter_child_nodes(node):
+            # print(f'{ast.unparse(child).rstrip()}')
+            traverse(child, context)
         return
 
     traverse(tree, [])
-    # print(module_levels)
+    # print(f'{filename} - module_levels: {module_levels}')
     return vulnerabilities
 
 def lookup_functions_in_file(filename, functionpaths):
@@ -126,7 +124,7 @@ def lookup_functions_in_file(filename, functionpaths):
 
     source_ast = ast.parse(source_code)
 
-    bad_code = collect_vulnerabilities(source_ast, functionpaths)
+    bad_code = collect_vulnerabilities(source_ast, functionpaths, filename)
     return bad_code
 
 def main():

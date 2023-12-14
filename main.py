@@ -12,7 +12,8 @@ def find_packages_in_files(files, packages):
         for package in packages:
             if scan.is_package_included(file, package[0]):
                 combined.append( (file, package) )
-
+                # print( (file, package) )
+    
     return combined
 
 def search_vul_functions(vul_files):
@@ -50,6 +51,8 @@ def main():
 
     files = crawl.get_relevant_files(d)
     all_packages = db.get_packages()
+
+    # print(f'files founded: {files}')
 
     vul_files = find_packages_in_files(files, all_packages)
 
