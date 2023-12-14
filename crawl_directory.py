@@ -15,7 +15,7 @@ def get_relevant_files(directory):
 
     relevant_files = []
     for file in all_files:
-      if '.py' in file or 'requirement.txt' in file:
+      if '.py' in file or 'requirements.txt' in file:
         relevant_files.append( file )
     return relevant_files
   

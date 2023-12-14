@@ -41,13 +41,12 @@ def test_is_package_included():
     print_is_package_included('cryptography_rsa_example.py', 'cryptography')
     return
 
-def collect_vulnerabilities(tree, functionpaths, filename=''):
+def collect_vulnerabilities(tree, functionpaths, lines, filename=''):
     # module_levels = [functionpath]
     module_levels = functionpaths.copy()
 
     vulnerabilities = []
 
-    pp = ast.unparse
     def traverse(node, context):
         # method call, loops, ...
         # print(ast.unparse(node))
@@ -66,7 +65,8 @@ def collect_vulnerabilities(tree, functionpaths, filename=''):
             for mod_level in module_levels:
                 if bool(re.match(f'{mod_level}(\.[a-zA-Z0-9]+)*', function_call)):
                     # print(f'Dangerous function call {function_call} used on line {node.lineno}')
-                    vulnerabilities.append( f'Line {node.lineno}: Dangerous function call {function_call}' )
+                    vulnerabilities.append( (f'Line {node.lineno}: Dangerous function call {function_call}', function_call, functionpaths, lines[node.lineno-1]) )
+                    # vulnerabilities.append( f'Line {node.lineno}: Dangerous function call {function_call}' )
             # print()
             pass
         elif isinstance(node, ast.Import):
@@ -76,10 +76,13 @@ def collect_vulnerabilities(tree, functionpaths, filename=''):
                 # print(f'field: {field}')
                 if field[0] == 'names':
                     curr_path = field[1][0].name
+            # *x, _ = curr_path.split('.')
+            # curr_path = '.'.join(x)
             for mod_level in module_levels:
                 if bool(re.match(f'{curr_path}(\.[a-zA-Z0-9]+)*', mod_level)):
                     _, extra_path = mod_level.split(curr_path)
-                    module_levels.append(extra_path[1:])
+                    if extra_path[1:]:
+                        module_levels.append(extra_path[1:])
                     break
             # print()
             pass
@@ -120,12 +123,46 @@ def collect_vulnerabilities(tree, functionpaths, filename=''):
     return vulnerabilities
 
 def lookup_functions_in_file(filename, functionpaths):
-    source_code = ''.join(load_file(filename))
+    lines = load_file(filename)
+    source_code = ''.join(lines)
 
     source_ast = ast.parse(source_code)
 
-    bad_code = collect_vulnerabilities(source_ast, functionpaths, filename)
+    bad_code = collect_vulnerabilities(source_ast, functionpaths, lines, filename)
     return bad_code
+
+def is_updated_version(up_to_date_version, prod_version):
+    up_to_date_list = [int(v) if v else 0 for v in up_to_date_version.split('.')]
+    prod_list = [int(v) if v else 0 for v in prod_version.split('.')]
+
+    # append 0's to the end of each list
+    size = max(len(up_to_date_list), len(prod_list))
+    up_to_date_list = up_to_date_list + ([0]*(size-len(up_to_date_list)))
+    prod_list = prod_list + ([0]*(size-len(prod_list)))
+
+    # prod should be greater or equal to up_to_date
+    for utd, p in zip(up_to_date_list, prod_list):
+        if utd > p:
+            return False
+    return True
+
+def check_requirements(filename, packages):
+    lines = load_file(filename)
+
+    vul_libraries = []
+
+    for line in lines:
+        line = line.rstrip()
+        for package in packages:
+            pname, pversion = package
+            if '==' in line and pname == line.split('==')[0]:
+                curr_version = line.split('==')[1]
+                if not is_updated_version(pversion, curr_version):
+                    vul_libraries.append( (pname, pversion, curr_version) )
+            elif pname == line:
+                vul_libraries.append( (pname, pversion, '') )
+
+    return vul_libraries
 
 def main():
     # test_is_package_included()

@@ -51,6 +51,24 @@ def reset_db():
     print(f'RESET: {DB_NAME}')
     return
 
+def better_function(functionpath, con=None):
+    con = con or sqlite3.connect(f'{DB_NAME}')
+    cur = con.cursor()
+    res = cur.execute(f'SELECT * FROM functions WHERE callpath LIKE "{functionpath}" LIMIT 1')
+    ret = res.fetchall()
+    if not ret:
+        return '', ''
+
+    packageid, _, purpose, qresistant = ret[0]
+
+    res = cur.execute(f'SELECT * FROM functions WHERE packageid = {packageid} AND purpose LIKE "{purpose}" and qresistant = {True}')
+    ret = res.fetchall()
+
+    if not ret:
+        return '', ''
+
+    return ret[0][1], ret[0][2]
+
 def add_package(name, version, con=None):
     con = con or sqlite3.connect(f'{DB_NAME}')
     cur = con.cursor()
@@ -103,6 +121,7 @@ def main():
     add_function('cryptography', 'cryptography.hazmat.primitives.asymmetric.dh', 'PKE', False)
     add_function('cryptography', 'cryptography.hazmat.primitives.asymmetric.ed25519', 'PKE', False)
     add_function('cryptography', 'cryptography.hazmat.primitives.asymmetric.ed448', 'PKE', False)
+    add_function('cryptography', 'cryptography.hazmat.primitives.asymmetric.kyber', 'PKE', True)
 
     # add M2Crypto package
     add_package('M2Crypto', '0.40.1')
