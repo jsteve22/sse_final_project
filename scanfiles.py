@@ -5,8 +5,11 @@ import ast
 import inspect
 
 def load_file(file_path):
-    with open(file_path, 'r') as r:
-        return r.readlines()
+    try:
+        with open(file_path, 'r') as r:
+            return r.readlines()
+    except:
+        return []
 
 def is_package_included(filename, packagename):
     # go through each line in the file and check to see if the package 
@@ -38,15 +41,18 @@ def test_is_package_included():
     print_is_package_included('cryptography_rsa_example.py', 'cryptography')
     return
 
-def collect_vulnerabilities(tree, functionpath):
-    module_levels = [functionpath]
+def collect_vulnerabilities(tree, functionpaths):
+    # module_levels = [functionpath]
+    module_levels = functionpaths.copy()
+
+    vulnerabilities = []
 
     pp = ast.unparse
     def traverse(node, context):
         # method call, loops, ...
         # print(ast.unparse(node))
         if isinstance(node, ast.Call):
-            print(f'Call: {ast.unparse(node)} \tcontext: {context}')
+            # print(f'Call: {ast.unparse(node)} \tcontext: {context}')
             # for child in ast.iter_child_nodes(node):
                 # print(f'Child: {ast.unparse(child)}')
             # print()
@@ -56,17 +62,29 @@ def collect_vulnerabilities(tree, functionpath):
                 if field[0] == 'func':
                     # print(ast.unparse(field[1]))
                     function_call = ast.unparse(field[1])
-            print(function_call)
-            print()
+            # print(function_call)
+            for mod_level in module_levels:
+                if bool(re.match(f'{mod_level}(\.[a-zA-Z0-9]+)*', function_call)):
+                    # print(f'Dangerous function call {function_call} used on line {node.lineno}')
+                    vulnerabilities.append( f'Line {node.lineno}: Dangerous function call {function_call}' )
+            # print()
             pass
         elif isinstance(node, ast.Import):
-            print(f'Import: {ast.unparse(node)} \tcontext: {context}')
+            # print(f'Import: {ast.unparse(node)} \tcontext: {context}')
+            curr_path = ''
             for field in ast.iter_fields(node):
-                print(f'field: {field}')
-            print()
+                # print(f'field: {field}')
+                if field[0] == 'names':
+                    curr_path = field[1][0].name
+            for mod_level in module_levels:
+                if bool(re.match(f'{curr_path}(\.[a-zA-Z0-9]+)*', mod_level)):
+                    _, extra_path = mod_level.split(curr_path)
+                    module_levels.append(extra_path[1:])
+                    break
+            # print()
             pass
         elif isinstance(node, ast.ImportFrom):
-            print(f'ImportFrom: {ast.unparse(node)} \tcontext: {context}')
+            # print(f'ImportFrom: {ast.unparse(node)} \tcontext: {context}')
             curr_path = ''
             curr_call = ''
             for field in ast.iter_fields(node):
@@ -77,7 +95,7 @@ def collect_vulnerabilities(tree, functionpath):
                     curr_path = field[1]
             # print(f'call path: {curr_path}.{curr_call}')
             imported = f'{curr_path}.{curr_call}'
-            print(f'imported: {imported}')
+            # print(f'imported: {imported}')
 
             # if the imported is also in module levels, add new definition to module levels
             for mod_level in module_levels:
@@ -90,7 +108,7 @@ def collect_vulnerabilities(tree, functionpath):
                     # module_levels.append(extra_path)
                     # break
 
-            print()
+            # print()
             pass
         else:
             for child in ast.iter_child_nodes(node):
@@ -100,21 +118,20 @@ def collect_vulnerabilities(tree, functionpath):
         return
 
     traverse(tree, [])
-    print(module_levels)
-    return
+    # print(module_levels)
+    return vulnerabilities
 
-def lookup_function_in_file(filename, functionpath):
+def lookup_functions_in_file(filename, functionpaths):
     source_code = ''.join(load_file(filename))
 
     source_ast = ast.parse(source_code)
 
-    bad_code = collect_vulnerabilities(source_ast, functionpath)
-
-    return
+    bad_code = collect_vulnerabilities(source_ast, functionpaths)
+    return bad_code
 
 def main():
     # test_is_package_included()
-    lookup_function_in_file('cryptography_rsa_example.py', 'cryptography.hazmat.primitives.asymmetric.rsa')
+    lookup_functions_in_file('cryptography_rsa_example.py', ['cryptography.hazmat.primitives.asymmetric.rsa'])
     return
 
 if __name__ == '__main__':
